@@ -10,7 +10,7 @@ Unlike traditional coupled architectures, DGAI separates the lightweight graph t
 
 ## 📄 Paper
 
-**DGAI: Decoupled On-Disk Graph-Based ANN Index for Efficient Updates and Queries** *Jiahao Lou, Quan Yu, Shufeng Gong, Song Yu, Yanfeng Zhang, Ge Yu* arXiv preprint, 2025.
+**DGAI: Decoupled On-Disk Graph-Based ANN Index for Efficient Updates and Queries** *Jiahao Lou, Shufeng Gong, Quan Yu, Hao Guo, Song Yu, Youyou Lu, Yanfeng Zhang, Tiezheng Nie, Ge Yu* arXiv preprint, 2025.
 
 [**Read the Paper**](https://arxiv.org/abs/2510.25401)
 
@@ -19,13 +19,12 @@ If you find this project or paper useful in your research, please cite our work:
 ```bibtex
 @misc{lou2025dgai,
       title={DGAI: Decoupled On-Disk Graph-Based ANN Index for Efficient Updates and Queries}, 
-      author={Jiahao Lou and Quan Yu and Shufeng Gong and Song Yu and Yanfeng Zhang and Ge Yu},
-      year={2025},
+      author={Jiahao Lou and Shufeng Gong and Quan Yu and Hao Guo and Youyou Lu and Song Yu and Yanfeng Zhang and Tiezheng Nie and Ge Yu},
+      year={2026},
       eprint={2510.25401},
       archivePrefix={arXiv},
       primaryClass={cs.DB},
-      url={[https://arxiv.org/abs/2510.25401](https://arxiv.org/abs/2510.25401)}, 
-      doi={10.48550/arXiv.2510.25401}
+      url={https://arxiv.org/abs/2510.25401}, 
 }
 ```
 ## 📧 Contact
