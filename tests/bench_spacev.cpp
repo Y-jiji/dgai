@@ -140,8 +140,10 @@ void write_query_row(std::ofstream &of, std::mutex &mu, uint64_t batch, const st
 }
 
 std::string visitor_name(const char *suffix, const SearchCfg &cfg) {
-  return std::string("dgai(k=") + std::to_string(cfg.k) + ",L=" + std::to_string(cfg.l) +
-        ",beam=" + std::to_string(cfg.beam) + ")_" + suffix;
+  // CSV is comma-delimited -- use ';' inside the descriptor so this field
+  // does not fragment into extra columns downstream.
+  return std::string("dgai(k=") + std::to_string(cfg.k) + ";L=" + std::to_string(cfg.l) +
+        ";beam=" + std::to_string(cfg.beam) + ")_" + suffix;
 }
 
 }  // namespace
