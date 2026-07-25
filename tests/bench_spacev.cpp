@@ -8,9 +8,11 @@
 // Phase 1 (BOOTSTRAP->BASE): plain sequential insert, no search.
 // Phase 2 (BASE->N): each BATCH-point step runs one insert thread
 // concurrently with a fixed-query search stream (undersampled logging --
-// the only undersampled step), then a fully-logged (k,L,beam) search sweep
-// at the same just-reached corpus size. Recall is computed post-hoc against
-// a ground-truth log, so rows carry the returned neighbor ids/dists.
+// the only undersampled step), then one fully-logged (rate=1) recall-
+// verification search using the same PRIMARY_CFG as the mix step -- the
+// mix step's own search rows are undersampled and too sparse to compute
+// recall@10 from reliably. Rows carry the returned neighbor ids/dists so
+// recall can be computed post-hoc against a ground-truth log.
 
 #include "v2/dynamic_index.h"
 #include "aux_utils.h"
@@ -76,12 +78,6 @@ struct SearchCfg {
   unsigned k, l, beam;
 };
 constexpr SearchCfg PRIMARY_CFG{10, 100, BEAMWIDTH};
-const std::vector<SearchCfg> EXTRA_CFGS = {
-    {10, 50, BEAMWIDTH},
-    {10, 150, BEAMWIDTH},
-    {10, 200, BEAMWIDTH},
-    {10, 100, 8},
-};
 
 void read_raw(const std::string &path, size_t off, size_t count, size_t dim, std::vector<T> &out) {
   out.assign(count * dim, T{});
@@ -274,23 +270,24 @@ int main(int argc, char **argv) {
     queries_of.flush();
     std::cerr << "[phase2] mix batch " << batch_id << " done, corpus=" << (off + n) << "\n";
 
-    // Un-undersampled search-only sweep at the just-reached corpus size.
-    for (auto &cfg : EXTRA_CFGS) {
-      std::string sweep_visitor = visitor_name("run0", cfg);
+    // Recall-verification search: same PRIMARY_CFG as the mix step above,
+    // but unsampled (rate=1) -- the mix step's own search rows are
+    // undersampled and too sparse to compute recall@10 from.
+    std::string verify_visitor = visitor_name("run0", PRIMARY_CFG);
 #pragma omp parallel for num_threads(SEARCH_THREADS) schedule(dynamic)
-      for (int64_t qi = 0; qi < (int64_t) QLEN; qi++) {
-        std::vector<TagT> ids(K);
-        std::vector<float> dists(K);
-        pipeann::QueryStats stats;
-        uint64_t start_ns = now_ns();
-        auto s = clk::now();
-        index.search(qbuf.data() + qi * DIM, cfg.k, 0, cfg.l, cfg.beam, ids.data(), dists.data(), &stats);
-        uint64_t lat_ns = (uint64_t) std::chrono::duration_cast<std::chrono::nanoseconds>(clk::now() - s).count();
-        write_query_row(queries_of, queries_mu, batch_id, sweep_visitor, (size_t) qi, start_ns, lat_ns, ids.data(),
-                        dists.data(), stats);
-      }
-      queries_of.flush();
+    for (int64_t qi = 0; qi < (int64_t) QLEN; qi++) {
+      std::vector<TagT> ids(K);
+      std::vector<float> dists(K);
+      pipeann::QueryStats stats;
+      uint64_t start_ns = now_ns();
+      auto s = clk::now();
+      index.search(qbuf.data() + qi * DIM, PRIMARY_CFG.k, 0, PRIMARY_CFG.l, PRIMARY_CFG.beam, ids.data(), dists.data(),
+                   &stats);
+      uint64_t lat_ns = (uint64_t) std::chrono::duration_cast<std::chrono::nanoseconds>(clk::now() - s).count();
+      write_query_row(queries_of, queries_mu, batch_id, verify_visitor, (size_t) qi, start_ns, lat_ns, ids.data(),
+                      dists.data(), stats);
     }
+    queries_of.flush();
   }
 
   return 0;
