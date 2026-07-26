@@ -24,7 +24,10 @@
 
 namespace pipeann {
   template<typename T, typename TagT>
-  int SSDIndex<T, TagT>::insert_in_place(const T *point, const TagT &tag, tsl::robin_set<uint32_t> *deletion_set) {
+  int SSDIndex<T, TagT>::insert_in_place(const T *point, const TagT &tag, tsl::robin_set<uint32_t> *deletion_set,
+                                         QueryStats *stats) {
+    QueryStats local_stats;
+    QueryStats *stats_ptr = (stats != nullptr) ? stats : &local_stats;
     QueryBuffer<T> *read_data = this->pop_query_buf(point);
     void *ctx = reader->get_ctx();
 
@@ -59,16 +62,15 @@ namespace pipeann {
     coord_map.reserve(2 * this->l_index);
 
     std::vector<uint64_t> page_ref{};
-    QueryStats stats;
-    this->do_beam_search(point, 0, l_index, beam_width, exp_node_info, &coord_map, &stats, deletion_set, false,
+    this->do_beam_search(point, 0, l_index, beam_width, exp_node_info, &coord_map, stats_ptr, deletion_set, false,
                          &page_ref, read_data);
     if(gs != nullptr) {
-      gs->insert_io1 += stats.io_us;
-      gs->insert_io += stats.io_us;
-      gs->update_ios += stats.n_ios * SECTOR_LEN;
-      gs->update_effective_topo_ios += stats.n_ios * (this->range + 1) * sizeof(uint32_t);
-      gs->update_effective_coord_ios += stats.n_ios * this->data_dim * sizeof(T);
-      gs->insert_ios1 += stats.n_ios * SECTOR_LEN + stats.rerank_ios * SECTOR_LEN;
+      gs->insert_io1 += stats_ptr->io_us;
+      gs->insert_io += stats_ptr->io_us;
+      gs->update_ios += stats_ptr->n_ios * SECTOR_LEN;
+      gs->update_effective_topo_ios += stats_ptr->n_ios * (this->range + 1) * sizeof(uint32_t);
+      gs->update_effective_coord_ios += stats_ptr->n_ios * this->data_dim * sizeof(T);
+      gs->insert_ios1 += stats_ptr->n_ios * SECTOR_LEN + stats_ptr->rerank_ios * SECTOR_LEN;
     }
     #ifdef COLLECT_INFO_2 
     if (gs != nullptr ){
@@ -111,6 +113,8 @@ namespace pipeann {
     for (auto &loc : locs) {
       pages_to_rmw_set.insert(loc_sector_no(loc));
     }
+    stats_ptr->n_out_edges = new_nhood.size();
+    stats_ptr->n_pages_touched = pages_to_rmw_set.size();
     std::vector<IORequest> pages_to_rmw;
     // ordered because of std::set
     for (auto &page_no : pages_to_rmw_set) {
@@ -237,7 +241,11 @@ namespace pipeann {
           LOG(ERROR) << "Target ID " << target_id << " not found in tri_pool";
           exit(-1);
         }
-        this->delta_prune_neighbors_pq(tri_pool, nhood, thread_pq_buf, tgt_idx);
+        bool evicted_existing = this->delta_prune_neighbors_pq(tri_pool, nhood, thread_pq_buf, tgt_idx);
+        if (evicted_existing) {
+          stats_ptr->n_in_edges += 1;
+          stats_ptr->n_evictions += 1;
+        }
 #else
         std::vector<float> dists(nhood.size(), 0.0f);
         std::vector<Neighbor> pool(nhood.size());
@@ -250,7 +258,13 @@ namespace pipeann {
         nhood.clear();
         std::sort(pool.begin(), pool.end());
         this->prune_neighbors_pq(pool, nhood, thread_pq_buf);
+        if (std::find(nhood.begin(), nhood.end(), target_id) != nhood.end()) {
+          stats_ptr->n_in_edges += 1;
+          stats_ptr->n_evictions += 1;
+        }
 #endif
+      } else {
+        stats_ptr->n_in_edges += 1;
       }
 
       auto w_sector = loc_sector_no(locs[i]);

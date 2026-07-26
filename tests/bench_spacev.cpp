@@ -104,15 +104,20 @@ void write_bootstrap_bin(const std::string &data_path, const std::string &out_pa
   w.write((char *) buf.data(), buf.size() * sizeof(T));
 }
 
+// `pages`, `out-edges`, `in-edges`, `evictions` are graph-mutation counters
+// from the insert's own QueryStats -- `pages` is the distinct-disk-page
+// footprint of the insert's read-modify-write, the key page-touch metric.
 void write_insert_header(std::ofstream &of) {
-  of << "phase,batch,tag,start_ns,lat_ns,n_ios,io_us\n";
+  of << "phase,batch,tag,start_ns,lat_ns,loads,io_us,pages,hops,visits,out-edges,in-edges,evictions\n";
 }
 
 void write_insert_row(std::ofstream &of, std::mutex &mu, const char *phase, uint64_t batch, TagT tag,
-                      uint64_t start_ns, uint64_t lat_ns, uint64_t n_ios, double io_us) {
+                      uint64_t start_ns, uint64_t lat_ns, uint64_t n_ios, double io_us,
+                      const pipeann::QueryStats &s) {
   std::ostringstream row;
   row << phase << ',' << batch << ',' << tag << ',' << start_ns << ',' << lat_ns << ',' << n_ios << ',' << io_us
-      << '\n';
+      << ',' << (uint64_t) s.n_pages_touched << ',' << (uint64_t) s.n_hops << ',' << (uint64_t) s.n_cmps << ','
+      << (uint64_t) s.n_out_edges << ',' << (uint64_t) s.n_in_edges << ',' << (uint64_t) s.n_evictions << '\n';
   std::lock_guard<std::mutex> lock(mu);
   of << row.str();
 }
@@ -120,7 +125,7 @@ void write_insert_row(std::ofstream &of, std::mutex &mu, const char *phase, uint
 void write_query_header(std::ofstream &of) {
   of << "batch,visitor,qi,start_ns,lat_ns";
   for (unsigned i = 1; i <= K; i++) of << ",id@" << i << ",dist@" << i;
-  of << ",n_ios,n_hops,n_cmps,total_us\n";
+  of << ",loads,hops,visits,total_us\n";
 }
 
 void write_query_row(std::ofstream &of, std::mutex &mu, uint64_t batch, const std::string &visitor, size_t qi,
@@ -199,11 +204,12 @@ int main(int argc, char **argv) {
       double io_us_before = gs->insert_io;
       uint64_t start_ns = now_ns();
       auto s = clk::now();
-      index.insert(buf.data() + i * DIM, tag);
+      pipeann::QueryStats stats;
+      index.insert(buf.data() + i * DIM, tag, &stats);
       uint64_t lat_ns = (uint64_t) std::chrono::duration_cast<std::chrono::nanoseconds>(clk::now() - s).count();
       uint64_t n_ios = (gs->update_ios - ios_before) / SECTOR_LEN;
       double io_us = gs->insert_io - io_us_before;
-      write_insert_row(inserts_of, inserts_mu, "seq", off / BATCH, tag, start_ns, lat_ns, n_ios, io_us);
+      write_insert_row(inserts_of, inserts_mu, "seq", off / BATCH, tag, start_ns, lat_ns, n_ios, io_us, stats);
     }
     inserts_of.flush();
     std::cerr << "[phase1] inserted up to " << (off + n) << "/" << BASE << "\n";
@@ -230,13 +236,14 @@ int main(int argc, char **argv) {
         double io_us_before = gs->insert_io;
         uint64_t start_ns = now_ns();
         auto s = clk::now();
-        index.insert(buf.data() + i * DIM, tag);
+        pipeann::QueryStats stats;
+        index.insert(buf.data() + i * DIM, tag, &stats);
         uint64_t lat_ns = (uint64_t) std::chrono::duration_cast<std::chrono::nanoseconds>(clk::now() - s).count();
         uint64_t row = mix_ctr.fetch_add(1);
         if (row % MIXRATE == 0) {
           uint64_t n_ios = (gs->update_ios - ios_before) / SECTOR_LEN;
           double io_us = gs->insert_io - io_us_before;
-          write_insert_row(inserts_of, inserts_mu, "mix", batch_id, tag, start_ns, lat_ns, n_ios, io_us);
+          write_insert_row(inserts_of, inserts_mu, "mix", batch_id, tag, start_ns, lat_ns, n_ios, io_us, stats);
         }
       }
       insert_done.store(true);

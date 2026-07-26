@@ -129,14 +129,14 @@ namespace pipeann {
   }
 
   template<typename T, typename TagT>
-  int DynamicSSDIndex<T, TagT>::insert(const T *point, const TagT &tag) {
+  int DynamicSSDIndex<T, TagT>::insert(const T *point, const TagT &tag, QueryStats *stats) {
     std::shared_lock<std::shared_timed_mutex> lock(_merge_lock);  // prevent merge during insert
     journal->append(v2::TxType::kInsert, tag);
     auto *deletion_set = &deletion_sets[active_delete_set];
 #ifdef USE_TOPO_DISK
     return _disk_index->insert_to_topo_in_place(point, tag, deletion_set);
 #else
-    return _disk_index->insert_in_place(point, tag, deletion_set);
+    return _disk_index->insert_in_place(point, tag, deletion_set, stats);
 #endif
   }
 

@@ -380,7 +380,8 @@ namespace pipeann {
 
    public:
     // in-place update.
-    int insert_in_place(const T *point, const TagT &tag, tsl::robin_set<uint32_t> *deletion_set = nullptr);
+    int insert_in_place(const T *point, const TagT &tag, tsl::robin_set<uint32_t> *deletion_set = nullptr,
+                        QueryStats *stats = nullptr);
 
     int insert_to_topo_in_place(const T *point, const TagT &tag, tsl::robin_set<uint32_t> *deletion_set = nullptr);
 
@@ -427,7 +428,10 @@ namespace pipeann {
         return (id == other.id);
       }
     };
-    void delta_prune_neighbors_pq(std::vector<TriangleNeighbor> &pool, std::vector<uint32_t> &pruned_list,
+    // Returns true if an existing neighbor was evicted to make room for the
+    // target (the back-edge was kept), false if the target itself lost the
+    // tie-break (the back-edge was rejected, pruned_list unchanged in membership).
+    bool delta_prune_neighbors_pq(std::vector<TriangleNeighbor> &pool, std::vector<uint32_t> &pruned_list,
                                   uint8_t *scratch, int tgt_idx);
     void reload(const char *index_prefix, uint32_t num_threads);
     // background I/O commit.

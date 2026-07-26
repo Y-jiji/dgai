@@ -26,6 +26,10 @@ namespace pipeann {
     double n_cache_hits = 0;    // # cache_hits
     double n_hops = 0;          // # search hops
     double n_current_used = 0;  // # force return for latency limit
+    double n_pages_touched = 0; // # distinct disk pages touched by this insert's graph-mutation read-modify-write
+    double n_out_edges = 0;     // # outgoing edges written for the newly-inserted node
+    double n_in_edges = 0;      // # existing neighbors whose edge list gained a back-edge to the new node
+    double n_evictions = 0;     // # of those back-edge updates that evicted a pre-existing edge
     double pq_compute_us = 0;         // total time spent in PQ compute
     double accuracy_compute_us = 0;         // total time spent in accuracy compute
     double populate_chunk_distances_us = 0; 

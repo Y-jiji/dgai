@@ -147,7 +147,7 @@ namespace pipeann {
   }
 
   template<typename T, typename TagT>
-  void SSDIndex<T, TagT>::delta_prune_neighbors_pq(std::vector<TriangleNeighbor> &pool,
+  bool SSDIndex<T, TagT>::delta_prune_neighbors_pq(std::vector<TriangleNeighbor> &pool,
                                                    std::vector<uint32_t> &pruned_list, uint8_t *scratch, int tgt_idx) {
     if (unlikely(pool.size() != this->range + 1)) {
       LOG(ERROR) << "Pool size " << pool.size() << " not equal to " << this->range + 1;
@@ -190,8 +190,9 @@ namespace pipeann {
     };
 
     if (to_evict != -1) {
+      bool evicted_existing = (to_evict != tgt_idx);
       finish();
-      return;
+      return evicted_existing;
     }
     // The point to insert is with high quality.
     // Step 2: Seek one with low quality to evict, early stop.
@@ -211,15 +212,18 @@ namespace pipeann {
       for (uint32_t t = start + 1; t < pool.size(); t++) {
         if (pool[t].distance / dists[t] > alpha) {
           to_evict = t;
+          bool evicted_existing = (to_evict != tgt_idx);
           finish();
-          return;
+          return evicted_existing;
         }
       }
     }
 
     // Step 3: all the points satisfy alpha-RNG, evict the farthest.
     to_evict = pool.size() - 1;
+    bool evicted_existing = (to_evict != tgt_idx);
     finish();
+    return evicted_existing;
   }
 
   template<typename T, typename TagT>

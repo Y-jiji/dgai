@@ -32,7 +32,7 @@ namespace pipeann {
     v2::Journal<TagT> *journal;
 
     // in-place
-    int insert(const T *point, const TagT &tag);
+    int insert(const T *point, const TagT &tag, QueryStats *stats = nullptr);
 
     void search(const T *query, const uint64_t K, const uint32_t mem_L, const uint64_t search_L,
                 const uint32_t beam_width, TagT *tags, float *distances, QueryStats *stats, bool dyn_search_l = true);
