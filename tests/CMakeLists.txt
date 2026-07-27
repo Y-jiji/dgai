@@ -59,12 +59,3 @@ target_link_libraries(shuffle_bin ${PROJECT_NAME} )
 
 add_executable(shuffle_dim shuffle2.cpp)
 target_link_libraries(shuffle_dim ${PROJECT_NAME} )
-
-add_executable(bench_sift bench_sift.cpp)
-target_link_libraries(bench_sift ${PROJECT_NAME})
-
-add_executable(bench_deep bench_deep.cpp)
-target_link_libraries(bench_deep ${PROJECT_NAME})
-
-add_executable(bench_spacev bench_spacev.cpp)
-target_link_libraries(bench_spacev ${PROJECT_NAME})

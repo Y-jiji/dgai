@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
-project(pipeann)
+# Renamed from `pipeann`: the fnct-db umbrella build configures this tree and
+# PipeANN's side by side, and both derived their library target name from
+# ${PROJECT_NAME}.
+project(dgai)
 
 set(CMAKE_STANDARD 17)
 option(USE_AIO "Use AIO instead of liburing" ON)
@@ -141,6 +144,20 @@ else()
 endif()
 
 add_subdirectory(src)
-add_subdirectory(tests)
-add_subdirectory(tests/utils)
+
+# Under the fnct-db umbrella build (evaluation/CMakeLists.txt) PipeANN is
+# configured in the same tree, and tests/ plus tests/utils/ declare eleven
+# targets whose names it also uses. Skip them there and build only the bench
+# binaries, whose sources sit in the evaluation directory so all three
+# systems' bench code can be read side by side.
+if(FNCTEVAL)
+	foreach(dataset sift deep spacev)
+		add_executable(dgai_${dataset} ${EVALDIR}/bench_dgai_${dataset}.cpp)
+		target_include_directories(dgai_${dataset} PRIVATE ${EVALDIR})
+		target_link_libraries(dgai_${dataset} ${PROJECT_NAME})
+	endforeach()
+else()
+	add_subdirectory(tests)
+	add_subdirectory(tests/utils)
+endif()
 # add_subdirectory(python)
