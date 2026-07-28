@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 # Renamed from `pipeann`: the fnct-db umbrella build configures this tree and
 # PipeANN's side by side, and both derived their library target name from
 # ${PROJECT_NAME}.
