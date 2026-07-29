@@ -702,7 +702,7 @@ int LinuxAlignedFileReader::send_read_no_alloc(std::vector<IORequest> &reqs, voi
 #endif
 }
 
-void LinuxAlignedFileReader::read_alloc(std::vector<IORequest> &read_reqs, void *ctx, std::vector<uint64_t> *page_ref) {
+size_t LinuxAlignedFileReader::read_alloc(std::vector<IORequest> &read_reqs, void *ctx, std::vector<uint64_t> *page_ref) {
 #ifndef READ_ONLY_TESTS
   std::vector<IORequest> disk_read_reqs;
 
@@ -733,7 +733,9 @@ void LinuxAlignedFileReader::read_alloc(std::vector<IORequest> &read_reqs, void 
       page_ref->push_back(req.offset / SECTOR_LEN);
     }
   }
+  return disk_read_reqs.size();
 #else
   read(read_reqs, ctx);
+  return read_reqs.size();
 #endif
 }

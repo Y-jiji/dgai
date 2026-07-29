@@ -50,7 +50,7 @@ class LinuxAlignedFileReader : public AlignedFileReader {
   void write_fd(int fd, std::vector<IORequest> &write_reqs, void *ctx);
 
   // read and update cache.
-  void read_alloc(std::vector<IORequest> &read_reqs, void *ctx, std::vector<uint64_t> *page_ref = nullptr);
+  size_t read_alloc(std::vector<IORequest> &read_reqs, void *ctx, std::vector<uint64_t> *page_ref = nullptr);
   // read but not update cache.
   int send_read_no_alloc(IORequest &req, void *ctx);
   int send_read_no_alloc(std::vector<IORequest> &reqs, void *ctx);

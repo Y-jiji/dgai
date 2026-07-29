@@ -176,7 +176,10 @@ namespace pipeann {
 #ifdef DIRECT_READ_CC
     reader->read(reads, ctx);
 #else
-    reader->read_alloc(reads, ctx, &page_ref);
+    {
+      size_t fetched = reader->read_alloc(reads, ctx, &page_ref);
+      if (stats_ptr != nullptr) stats_ptr->n_ios += fetched;
+    }
 #endif
     if(gs != nullptr) {
       gs->insert_io2 += timer.elapsed();

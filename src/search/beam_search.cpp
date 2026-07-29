@@ -156,15 +156,18 @@ namespace pipeann {
           frontier_read_reqs.emplace_back(IORequest(offset, size_per_io, sector_buf, u_loc_offset(loc), max_node_len));
           if (stats != nullptr) {
             stats->n_4k++;
-            stats->n_ios++;
           }
           num_ios++;
         }
         io_timer.reset();
 #ifdef DIRECT_READ_CC
         reader->read(frontier_read_reqs, ctx);
+        if (stats != nullptr) stats->n_ios += frontier_read_reqs.size();
 #else
-        reader->read_alloc(frontier_read_reqs, ctx, &page_ref);
+        // Count what reached the device: read_alloc serves whatever its page
+        // cache already holds, so the request list overstates device reads.
+        size_t fetched = reader->read_alloc(frontier_read_reqs, ctx, &page_ref);
+        if (stats != nullptr) stats->n_ios += fetched;
 #endif
 
         if (stats != nullptr) {

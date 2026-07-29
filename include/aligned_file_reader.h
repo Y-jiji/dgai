@@ -38,7 +38,9 @@ class AlignedFileReader {
   virtual void get_events(void *ctx, int n_ops) = 0;
   */
 
-  virtual void read_alloc(std::vector<IORequest> &read_reqs, void *ctx, std::vector<uint64_t> *page_ref = nullptr) = 0;
+  // Returns the number of pages actually submitted to the device, i.e.
+  // those the page cache could not serve.
+  virtual size_t read_alloc(std::vector<IORequest> &read_reqs, void *ctx, std::vector<uint64_t> *page_ref = nullptr) = 0;
   inline void wbc_write(std::vector<IORequest> &write_reqs, void *ctx, std::vector<uint64_t> *page_ref = nullptr) {
     // auto locked_reqs = v2::lockReqs(v2::cache.lock_table, write_reqs);
     for (auto &req : write_reqs) {
