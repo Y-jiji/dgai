@@ -23,6 +23,7 @@ namespace pipeann {
     double cpu_us2 = 0;         // total time spent in CPU
     double n_cmps_saved = 0;    // # cmps saved
     double n_cmps = 0;          // # cmps
+    double n_exact = 0;         // # full-precision distances computed over fetched coords
     double n_cache_hits = 0;    // # cache_hits
     double n_hops = 0;          // # search hops
     double n_current_used = 0;  // # force return for latency limit

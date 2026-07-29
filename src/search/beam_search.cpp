@@ -185,6 +185,9 @@ namespace pipeann {
         data_buf_idx++;
         memcpy(node_fp_coords_copy, node_fp_coords, data_dim * sizeof(T));
         float cur_expanded_dist = dist_cmp->compare(query, node_fp_coords_copy, (unsigned) aligned_dim);
+        if (stats != nullptr) {
+          stats->n_exact++;
+        }
 
         if (coord_map != nullptr) {
           coord_map->insert(std::make_pair(id, node_fp_coords_copy));
@@ -215,9 +218,6 @@ namespace pipeann {
             visited.insert(id);
             cmps++;
             float dist = dist_scratch[m];
-            if (stats != nullptr) {
-              stats->n_cmps++;
-            }
             if (dist >= retset[cur_list_size - 1].distance && (cur_list_size == l_search))
               continue;
             Neighbor nn(id, dist, true);
