@@ -335,6 +335,13 @@ namespace pipeann {
 #else
     timer.reset();
     reader->write(writes, ctx);
+    if (stats_ptr != nullptr) {
+      // Count at the write, not from the planned RMW set: n_pages_touched is
+      // the plan, this is what the device received.
+      uint64_t written = 0;
+      for (auto &req : writes) written += req.len / SECTOR_LEN;
+      stats_ptr->n_pages_written += written;
+    }
     if(gs != nullptr) {
       gs->insert_io3 += timer.elapsed();
       gs->insert_io += timer.elapsed();
